@@ -44,5 +44,5 @@ def test_listar_vacinas_paciente_unit(monkeypatch):
     assert result[0]["registro_valido"] is True
     assert captured["params"][-1] == 25
     sql_str = str(captured["sql"])
-    assert "COALESCE(fvv.st_registro_valido, 1) = 1" in sql_str
+    assert "COALESCE(imuno.st_registro_valido, 1) <> 0" in sql_str
     assert "imuno.no_imunobiologico ILIKE %s" in sql_str

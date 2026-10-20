@@ -60,7 +60,7 @@ def test_listar_atendimentos_odonto_mapeamento_e_anonimizacao(monkeypatch):
 
     # Valida parâmetros da query e safe limit
     sql, params = consultas[0]
-    assert "fao.co_dim_tipo_consulta = 1" in sql
+    assert "dtc.nu_identificador::text = '1'" in sql
     assert "fao.st_conduta_tratamento_concluid = 1" in sql
     assert "fao.st_gestante = 1" in sql
     assert params[-1] == 10
@@ -152,21 +152,28 @@ def test_listar_procedimentos_odonto_filtro_grupo(monkeypatch):
         paciente_id=42,
         grupo="exodontia",
     )
-    assert "0414020138" in consultas[0][0]
+    # Os códigos vão como parâmetro (lista), os mesmos das flags is_*.
+    assert "0414020138" in consultas[0][1][1]
+    assert "0414020120" not in consultas[0][1][1]  # decíduo fica fora do B3
+    assert "ABPO010" not in consultas[0][1][1]
 
     saude_bucal.listar_procedimentos_odonto(
         ContextoFalso(),
         paciente_id=42,
         grupo="preventivo",
     )
-    assert "0101020058" in consultas[1][0]
+    assert "0101020058" in consultas[1][1][1]
+    assert "ABPO010" in consultas[1][1][1]
 
     saude_bucal.listar_procedimentos_odonto(
         ContextoFalso(),
         paciente_id=42,
         grupo="tra_art",
     )
-    assert "0307010074" in consultas[2][0]
+    assert consultas[2][1][1] == ["0307010074"]
+
+    with pytest.raises(ValueError, match="grupo inválido"):
+        saude_bucal.listar_procedimentos_odonto(ContextoFalso(), paciente_id=42, grupo="xyz")
 
 
 def test_listar_problemas_odonto_mapeamento_e_filtros(monkeypatch):

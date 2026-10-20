@@ -79,6 +79,8 @@ class HealthUnitResult(TypedDict):
     name: Optional[str]
     localidade_id: Optional[int]
     is_active: bool
+    tipo_cnes: Optional[int]
+    tipo_unidade: Optional[str]
 
 
 class AtendimentoSOAPResult(TypedDict):

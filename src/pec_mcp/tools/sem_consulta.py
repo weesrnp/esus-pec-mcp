@@ -119,7 +119,9 @@ def _build_sem_consulta_sql(
     )
 
     where_clauses = [
-        "(ult.ultima_consulta IS NULL OR ult.ultima_consulta < CURRENT_DATE - INTERVAL %s)"
+        "(ult.ultima_consulta IS NULL OR ult.ultima_consulta < CURRENT_DATE - INTERVAL %s)",
+        # Busca ativa não inclui quem faleceu.
+        "COALESCE(c.st_faleceu, 0) = 0",
     ]
     where_clauses.extend(patient_clauses)
     where_sql = "WHERE " + " AND ".join(where_clauses)

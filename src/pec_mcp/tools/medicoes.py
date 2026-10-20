@@ -63,6 +63,18 @@ _FROM_PEC = """
     LEFT JOIN tb_cbo cb    ON cb.co_cbo            = l.co_cbo
 """
 
+# tl_medicao guarda as medidas como varchar. Um "72,5" ou "?" num registro
+# derrubaria a consulta inteira com ::numeric; aqui o valor inválido vira NULL.
+def _numero_seguro(coluna: str) -> str:
+    return (
+        f"(CASE WHEN {coluna} ~ '^[0-9]+([.,][0-9]+)?$' "
+        f"THEN replace({coluna}, ',', '.')::numeric END)"
+    )
+
+
+_PESO_PEC = _numero_seguro("m.nu_medicao_peso")
+_ALTURA_PEC = _numero_seguro("m.nu_medicao_altura")
+
 # Visita domiciliar: tb_fat_visita_domiciliar → paciente + profissional
 _FROM_VISITA = """
     FROM tb_fat_visita_domiciliar v
@@ -92,7 +104,8 @@ def _build_date_filter_pec(
         clauses.append("m.dt_medicao >= %s::timestamp")
         params.append(data_inicio)
     if data_fim:
-        clauses.append("m.dt_medicao <= %s::timestamp")
+        # dt_medicao é timestamp: "<= 'AAAA-MM-DD'" cortaria o próprio dia.
+        clauses.append("m.dt_medicao < (%s::date + 1)")
         params.append(data_fim)
     return " AND ".join(clauses) if clauses else ""
 
@@ -116,7 +129,7 @@ def _to_float(value: Any) -> Optional[float]:
     if value is None:
         return None
     try:
-        return float(value)
+        return float(str(value).replace(",", ".")) if isinstance(value, str) else float(value)
     except (ValueError, TypeError):
         return None
 
@@ -161,20 +174,19 @@ def listar_registros_antropometria(
     sql_pec = f"""
         SELECT
             c.co_seq_cidadao                          AS paciente_id,
-            m.nu_medicao_peso::numeric                AS peso_kg,
-            m.nu_medicao_altura::numeric              AS altura_cm,
+            {_PESO_PEC}                               AS peso_kg,
+            {_ALTURA_PEC}                             AS altura_cm,
             CASE
-                WHEN m.nu_medicao_peso IS NOT NULL
-                 AND m.nu_medicao_altura IS NOT NULL
-                 AND m.nu_medicao_altura::numeric > 0
+                WHEN {_PESO_PEC} IS NOT NULL
+                 AND {_ALTURA_PEC} > 0
                 THEN ROUND(
-                    m.nu_medicao_peso::numeric
-                    / ((m.nu_medicao_altura::numeric / 100.0) ^ 2), 2)
+                    {_PESO_PEC}
+                    / (({_ALTURA_PEC} / 100.0) ^ 2), 2)
                 ELSE NULL
             END                                       AS imc,
             m.dt_medicao                              AS data_medicao,
             p.co_seq_prof                             AS prof_id,
-            p.no_social_profissional                  AS prof_nome,
+            COALESCE(p.no_social_profissional, p.no_civil_profissional)                  AS prof_nome,
             cb.co_cbo_2002                            AS cbo_codigo,
             cb.no_cbo                                 AS cbo_nome,
             'pec'                                     AS origem
@@ -282,7 +294,7 @@ def listar_registros_pa(
             m.nu_medicao_pressao_arterial                        AS pressao_raw,
             m.dt_medicao                                         AS data_medicao,
             p.co_seq_prof                                        AS prof_id,
-            p.no_social_profissional                             AS prof_nome,
+            COALESCE(p.no_social_profissional, p.no_civil_profissional)                             AS prof_nome,
             cb.co_cbo_2002                                       AS cbo_codigo,
             cb.no_cbo                                            AS cbo_nome,
             'pec'                                                AS origem
@@ -409,7 +421,7 @@ def listar_registros_hgt(
             m.tp_glicemia               AS tp_glicemia,
             m.dt_medicao                AS data_medicao,
             p.co_seq_prof               AS prof_id,
-            p.no_social_profissional    AS prof_nome,
+            COALESCE(p.no_social_profissional, p.no_civil_profissional)    AS prof_nome,
             cb.co_cbo_2002              AS cbo_codigo,
             cb.no_cbo                   AS cbo_nome,
             'pec'                       AS origem

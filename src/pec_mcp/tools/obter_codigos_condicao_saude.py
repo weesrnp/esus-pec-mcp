@@ -34,7 +34,7 @@ ORDER BY ciap.co_ciap
 LIMIT %s;
 """
 
-_CID_CODE_RE = re.compile(r"^[A-Z][0-9]{1,2}(?:\\.[0-9]{1,2})?$")
+_CID_CODE_RE = re.compile(r"^[A-Z][0-9]{1,2}(?:\.?[0-9]{1,2})?$")
 _CIAP_CODE_RE = re.compile(r"^[A-Z][0-9]{2,3}$")
 
 _PRESET_CONDITIONS = {
@@ -156,8 +156,8 @@ def _normalize_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", str(value))
     normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
     normalized = normalized.lower()
-    normalized = re.sub(r"[^a-z0-9\\s]", " ", normalized)
-    normalized = re.sub(r"\\s+", " ", normalized).strip()
+    normalized = re.sub(r"[^a-z0-9\s]", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
     return normalized
 
 
@@ -217,9 +217,9 @@ def _token_like(normalized: str) -> str:
 
 
 def _code_like(raw: str, pattern: Pattern[str]) -> Optional[str]:
-    candidate = re.sub(r"\\s+", "", str(raw or "")).upper()
+    candidate = re.sub(r"\s+", "", str(raw or "")).upper()
     if pattern.match(candidate):
-        return f"{candidate}%"
+        return f"{candidate.replace('.', '')}%"
     return None
 
 
@@ -284,7 +284,7 @@ def obter_codigos_condicao_saude(
             fallback_condition_text=None,
         )
 
-    safe_limit = max(1, min(limite, 200))
+    safe_limit = max(1, min(int(limite), 200))
     raw_like = f"%{raw}%"
     normalized_like = _token_like(normalized)
 

@@ -14,10 +14,12 @@ from typing import Any, List, Optional
 from mcp.server.fastmcp import Context
 
 from ..db import query_all
+from ..domain.patient import mascarar_texto_livre
 from ..models import AtendimentoSOAPResult
 from . import get_db_conn, to_iso_datetime
 
-_MAX_LIMIT: int = 1000
+_MAX_LIMIT: int = 200
+_DEFAULT_LIMIT: int = 50
 
 _SQL_ATENDIMENTOS_BASE = """
 SELECT
@@ -26,7 +28,7 @@ SELECT
     a.dt_inicio                   AS data_hora,
     cb.co_cbo_2002                AS cbo_codigo,
     cb.no_cbo                     AS cbo_descricao,
-    p.no_social_profissional      AS profissional,
+    COALESCE(p.no_social_profissional, p.no_civil_profissional) AS profissional,
     ap.tp_atend_prof              AS tipo_profissional_id,
     ap.tp_atend                   AS tipo_atendimento_id,
     es.ds_subjetivo               AS soap_s,
@@ -77,16 +79,18 @@ ORDER BY a.dt_inicio DESC NULLS LAST
 
 def _parse_soap_conditions(raw_condicoes: Any) -> list:
     """Extrai e valida lista de condições retornadas pelo json_agg do PostgreSQL."""
-    if isinstance(raw_condicoes, list):
-        return raw_condicoes
+    parsed: Any = raw_condicoes
     if isinstance(raw_condicoes, str):
         try:
             parsed = json.loads(raw_condicoes)
-            if isinstance(parsed, list):
-                return parsed
         except Exception:
             return []
-    return []
+    if not isinstance(parsed, list):
+        return []
+    for item in parsed:
+        if isinstance(item, dict) and item.get("observacao") is not None:
+            item["observacao"] = mascarar_texto_livre(item["observacao"])
+    return parsed
 
 
 def _format_atendimento_row(row: dict) -> AtendimentoSOAPResult:
@@ -104,10 +108,10 @@ def _format_atendimento_row(row: dict) -> AtendimentoSOAPResult:
         tipo_atendimento_id=str(row.get("tipo_atendimento_id"))
         if row.get("tipo_atendimento_id") is not None
         else None,
-        soap_s=str(row.get("soap_s")) if row.get("soap_s") is not None else None,
-        soap_o=str(row.get("soap_o")) if row.get("soap_o") is not None else None,
-        soap_a=str(row.get("soap_a")) if row.get("soap_a") is not None else None,
-        soap_p=str(row.get("soap_p")) if row.get("soap_p") is not None else None,
+        soap_s=mascarar_texto_livre(row.get("soap_s")),
+        soap_o=mascarar_texto_livre(row.get("soap_o")),
+        soap_a=mascarar_texto_livre(row.get("soap_a")),
+        soap_p=mascarar_texto_livre(row.get("soap_p")),
         condicoes=_parse_soap_conditions(row.get("condicoes")),
     )
 
@@ -115,13 +119,14 @@ def _format_atendimento_row(row: dict) -> AtendimentoSOAPResult:
 def listar_ultimos_atendimentos_soap(
     ctx: Context,
     paciente_id: int,
-    limite: Optional[int] = None,
+    limite: Optional[int] = _DEFAULT_LIMIT,
 ) -> List[AtendimentoSOAPResult]:
     """
     Recupera últimos atendimentos SOAP do paciente (médicos e enfermeiros).
 
     Atendimentos profissionais cancelados são ignorados porque não representam
-    atendimentos clínicos concluídos ou válidos.
+    atendimentos clínicos concluídos ou válidos. CPF, CNS, telefone e e-mail
+    digitados no texto do SOAP saem mascarados.
     """
     if paciente_id is None:
         raise ValueError("paciente_id é obrigatório para consultar histórico de atendimento.")
@@ -130,16 +135,14 @@ def listar_ultimos_atendimentos_soap(
     if paciente_id_int <= 0:
         raise ValueError("paciente_id deve ser um inteiro positivo.")
 
-    safe_limit = None
-    if limite is not None:
-        safe_limit = max(1, min(int(limite), _MAX_LIMIT))
+    # Sem limite explícito vale o padrão: o histórico inteiro de SOAP de um
+    # paciente não deve sair numa chamada só.
+    pedido = _DEFAULT_LIMIT if limite is None else int(limite)
+    safe_limit = max(1, min(pedido, _MAX_LIMIT))
 
     conn = get_db_conn(ctx)
-    sql = _SQL_ATENDIMENTOS_BASE
-    params = [paciente_id_int]
-    if safe_limit is not None:
-        sql = f"{sql} LIMIT %s"
-        params.append(safe_limit)
+    sql = f"{_SQL_ATENDIMENTOS_BASE} LIMIT %s"
+    params = [paciente_id_int, safe_limit]
 
     rows = query_all(conn, sql, tuple(params))
 

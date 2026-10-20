@@ -1,10 +1,10 @@
 """
 Filtro obrigatório: as tools de busca ampla recusam chamada sem critério.
 
-Sem isto, uma pergunta vaga da LM viraria uma varredura de toda a base de
+Sem isto, uma pergunta vaga do cliente MCP viraria uma varredura de toda a base de
 cidadãos — o oposto da minimização de dados. As três tools abaixo exigem ao
 menos um critério e devem dizer, na própria mensagem de erro, quais critérios
-aceitam, para que a LM consiga se corrigir sozinha.
+aceitam, para que o cliente MCP consiga se corrigir sozinha.
 
 Não toca o banco: o ValueError é levantado antes de `get_db_conn`.
 """
@@ -46,6 +46,6 @@ def test_tool_exige_pelo_menos_um_criterio(nome_tool, tool, termos_esperados):
     ausentes = [termo for termo in termos_esperados if termo.lower() not in mensagem]
     assert not ausentes, (
         f"A tool '{nome_tool}' recusou a chamada sem critério (correto), mas a "
-        f"mensagem não cita {ausentes}: {str(erro.value)!r}. A LM depende dessa "
+        f"mensagem não cita {ausentes}: {str(erro.value)!r}. O cliente MCP depende dessa "
         f"mensagem para reformular a chamada."
     )

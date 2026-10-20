@@ -57,8 +57,13 @@ def build_patient_filters(
         clauses.append(f"{alias}.co_seq_cidadao = %s")
         params.append(paciente_id)
     if name_prefix:
+        # Escapa % e _ para que "%" não vire varredura do cadastro inteiro.
+        prefix = str(name_prefix).strip()
+        if len(prefix) < 2:
+            raise ValueError("name_starts_with precisa de pelo menos 2 caracteres.")
+        escaped = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         clauses.append(f"{alias}.no_cidadao ILIKE %s")
-        params.append(f"{name_prefix}%")
+        params.append(f"{escaped}%")
     if sex:
         normalized = normalize_sex(sex)
         if not normalized:
@@ -139,7 +144,8 @@ def build_patient_filters(
 def _normalize_code_prefix(code: Optional[str]) -> Optional[str]:
     if not code:
         return None
-    normalized = str(code).strip().upper()
+    # tb_cid10.nu_cid10 não tem ponto ("E110"); "E11.0" nunca casaria.
+    normalized = str(code).strip().upper().replace(".", "")
     if "%" not in normalized and "_" not in normalized:
         normalized = f"{normalized}%"
     return normalized

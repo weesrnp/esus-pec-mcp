@@ -33,7 +33,7 @@ _VALID_TRANSPORTS = {"stdio", "sse", "streamable-http"}
 class ServerSettings:
     """Configuração de transporte do processo standalone."""
 
-    transport: str = "streamable-http"
+    transport: str = "stdio"
     host: str = "127.0.0.1"
     port: int = 5174
 
@@ -91,7 +91,8 @@ def get_server_settings(env: Mapping[str, str] | None = None) -> ServerSettings:
     """Lê e valida host, porta e transporte do processo standalone."""
 
     source = os.environ if env is None else env
-    transport = _value(source, "MCP_TRANSPORT") or "streamable-http"
+    # stdio é o que clientes MCP locais esperam ao iniciar o processo.
+    transport = _value(source, "MCP_TRANSPORT") or "stdio"
     if transport not in _VALID_TRANSPORTS:
         valid = ", ".join(sorted(_VALID_TRANSPORTS))
         raise RuntimeError(f"MCP_TRANSPORT inválido. Use um de: {valid}.")
@@ -108,4 +109,18 @@ def get_server_settings(env: Mapping[str, str] | None = None) -> ServerSettings:
     return ServerSettings(transport=transport, host=host, port=port)
 
 
-__all__ = ["ServerSettings", "get_db_dsn", "get_server_settings"]
+def get_statement_timeout_ms(env: Mapping[str, str] | None = None) -> int:
+    """Timeout por consulta (ms). Padrão de 30 s, aceito entre 1 s e 10 min."""
+
+    source = os.environ if env is None else env
+    text = _value(source, "PEC_DB_STATEMENT_TIMEOUT_MS") or "30000"
+    try:
+        value = int(text)
+    except ValueError as exc:
+        raise RuntimeError("PEC_DB_STATEMENT_TIMEOUT_MS deve ser um número inteiro.") from exc
+    if not 1_000 <= value <= 600_000:
+        raise RuntimeError("PEC_DB_STATEMENT_TIMEOUT_MS deve estar entre 1000 e 600000.")
+    return value
+
+
+__all__ = ["ServerSettings", "get_db_dsn", "get_server_settings", "get_statement_timeout_ms"]

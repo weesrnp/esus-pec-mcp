@@ -15,7 +15,7 @@ def test_listar_acoes_pse_mapeamento_e_filtros(monkeypatch):
         return [
             {
                 "atividade_id": 300,
-                "inep_escola": "41096501",
+                "inep_escola": "12345678",
                 "nome_escola": "Colegio Estadual Duque de Caxias",
                 "data_atividade": date(2026, 3, 20),
                 "equipe_ine": "0001234567",
@@ -36,7 +36,7 @@ def test_listar_acoes_pse_mapeamento_e_filtros(monkeypatch):
 
     resultado = pse.listar_acoes_pse(
         ContextoFalso(),
-        inep_escola="41096501",
+        inep_escola="12345678",
         ine_equipe="0001234567",
         acao_tematica="vacinacao",
         limite=30,
@@ -45,7 +45,7 @@ def test_listar_acoes_pse_mapeamento_e_filtros(monkeypatch):
     assert len(resultado) == 1
     row = resultado[0]
     assert row["atividade_id"] == 300
-    assert row["inep_escola"] == "41096501"
+    assert row["inep_escola"] == "12345678"
     assert row["equipe_ine"] == "0001234-567"
     assert row["verificacao_vacinal"] is True
     assert row["avaliacao_antropometrica"] is True

@@ -78,13 +78,17 @@
 
 # Tool: listar_unidades_saude
 
-- **Descrição**: lista todas as unidades de saúde cadastradas (uso típico: popular select de filtro).
+- **Descrição**: lista as unidades de saúde cadastradas (uso típico: popular select de filtro).
 - **Consulta**: somente leitura.
 - **Tabelas/colunas relevantes**:
   - `tb_unidade_saude`:
     - `co_seq_unidade_saude` (PK usada nos filtros), `nu_cnes` (CNES), `no_unidade_saude`
-    - `co_localidade_endereco`, `st_ativo`
-- **Filtros suportados**: nenhum (retorna todas as unidades; no dump atual são 21, com 12 usadas em atendimentos e 10 com vínculos por CNES).
+    - `co_localidade_endereco`, `st_ativo`, `tp_unidade_saude`
+  - `tb_tipo_unidade_saude`: `co_tipo_unidade_cnes` (código CNES do tipo), `no_tipo_unidade_saude`
+- **Filtros suportados**:
+  - `apenas_atencao_primaria` (padrão `true`): tipos CNES 01, 02, 32, 40, 71, 72 e 74
+  - `incluir_inativas` (padrão `false`)
+- **Retorno**: `unidade_id`, `cnes`, `name`, `localidade_id`, `is_active`, `tipo_cnes`, `tipo_unidade`
 - **Guardrails**:
   - Apenas leitura; ordena pelo nome da unidade.
 
@@ -101,7 +105,7 @@
   - `tb_problema_evolucao` + `tb_problema` + `tb_cid10`/`tb_ciap`: agregam CID/CIAP ligados ao atendimento (`co_atend_prof`) na mesma resposta
 - **Filtros suportados**:
   - `paciente_id` (obrigatório, `co_seq_cidadao`)
-  - `limite` (opcional; 1–1000; sem limite quando não informado)
+  - `limite` (opcional; padrão 50, teto 200)
 - **Guardrails**:
   - Restringe resultados a profissionais médicos (`225%`) ou enfermeiros (`2235%`) via `co_cbo_2002`.
   - Exclui atendimentos profissionais cancelados com `COALESCE(tb_atend_prof.st_cancelado, 0) = 0`.
@@ -168,7 +172,7 @@
   - `unidade_saude_id` (co_dim_unidade_saude)
   - `apenas_contagem` (bool): retorna só `{count}` em vez da lista
   - `limite` (1–500; default 200)
-- **Retorno** (listagem): `visita_id`, `profissional`, `data_visita`, `paciente_id`, `paciente_nome` (iniciais), `turno`, `desfecho`, `motivo_visita` (lista), `acompanhamentos` (lista), `tem_peso_altura`, `tem_pa`, `tem_glicemia`
+- **Retorno** (listagem): `visita_id`, `profissional`, `data_visita`, `paciente_id` (`co_seq_cidadao`, o mesmo das outras tools), `paciente_nome` (iniciais), `turno`, `desfecho`, `motivo_visita` (lista), `acompanhamentos` (lista), `tem_peso_altura`, `tem_pa`, `tem_glicemia`
 - **Retorno** (contagem): `{count}`
 - **Guardrails**: nomes de pacientes anonimizados (iniciais); limite 500 registros; profissional fixado a ACS (CBO 515105).
 

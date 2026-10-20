@@ -17,12 +17,12 @@ _SQL_VACINAS = """
 SELECT
     cp.co_cidadao AS paciente_id,
     imuno.no_imunobiologico AS imunobiologico,
-    imuno.ds_sigla AS sigla,
+    imuno.sg_imunobiologico AS sigla,
     dose.no_dose_imunobiologico AS dose,
     t.dt_registro AS data_aplicacao,
-    fvv.nu_lote AS lote,
+    fvv.no_lote AS lote,
     CASE WHEN COALESCE(fvv.st_registro_anterior, 0) = 1 THEN 'transcrita' ELSE 'aplicada' END AS origem_registro,
-    CASE WHEN COALESCE(fvv.st_registro_valido, 1) = 1 THEN true ELSE false END AS registro_valido
+    CASE WHEN COALESCE(imuno.st_registro_valido, 1) <> 0 THEN true ELSE false END AS registro_valido
 FROM tb_fat_vacinacao_vacina fvv
 JOIN tb_fat_vacinacao fv ON fv.co_seq_fat_vacinacao = fvv.co_fat_vacinacao
 JOIN tb_fat_cidadao_pec cp ON cp.co_seq_fat_cidadao_pec = fv.co_fat_cidadao_pec
@@ -76,7 +76,12 @@ def listar_vacinas_paciente(
     Lista o histórico vacinal registrado para um paciente (PNI / e-SUS PEC).
 
     Retorna imunobiológico, sigla, dose, data de aplicação, lote, origem (aplicada na UBS
-    ou transcrição de caderneta) e flag de validade da dose.
+    ou transcrição de caderneta) e flag de validade.
+
+    `tb_fat_vacinacao_vacina` não tem flag de validade própria: `registro_valido`
+    vem de `tb_dim_imunobiologico.st_registro_valido` (ETL em duas fases do DW).
+    Só o valor 0 marca registro inválido; NULL é dimensão ainda não consolidada
+    pelo ETL noturno e continua visível, para não esconder doses do dia.
     """
     pid = _validate_paciente_id(paciente_id)
     safe_limit = max(1, min(int(limite), 200))
@@ -85,11 +90,11 @@ def listar_vacinas_paciente(
     params: list[Any] = [pid]
 
     if apenas_validas:
-        filters.append("AND COALESCE(fvv.st_registro_valido, 1) = 1")
+        filters.append("AND COALESCE(imuno.st_registro_valido, 1) <> 0")
 
     if imunobiologico and imunobiologico.strip():
         term = f"%{imunobiologico.strip().upper()}%"
-        filters.append("AND (imuno.no_imunobiologico ILIKE %s OR imuno.ds_sigla ILIKE %s)")
+        filters.append("AND (imuno.no_imunobiologico ILIKE %s OR imuno.sg_imunobiologico ILIKE %s)")
         params.extend([term, term])
 
     extra_filters = "\n".join(filters)

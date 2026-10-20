@@ -8,8 +8,8 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from .config import ServerSettings, get_db_dsn, get_server_settings
-from .db import get_connection
+from .config import ServerSettings, get_db_dsn, get_server_settings, get_statement_timeout_ms
+from .db import ConexaoSomenteLeitura
 from .tools.atendimentos import listar_ultimos_atendimentos_soap
 from .tools.atividades_coletivas import (
     consultar_participacao_coletiva,
@@ -75,8 +75,11 @@ STANDALONE_TOOLS = (
 def _build_lifespan(dsn: str | None):
     @asynccontextmanager
     async def lifespan(_server: FastMCP) -> AsyncIterator[dict[str, Any]]:
-        connection = get_connection(dsn=dsn or get_db_dsn())
-        connection.set_session(readonly=True, autocommit=True)
+        connection = ConexaoSomenteLeitura(
+            dsn or get_db_dsn(), statement_timeout_ms=get_statement_timeout_ms()
+        )
+        # Abre já na subida: credencial errada aparece logo, não na 1ª pergunta.
+        connection.abrir()
         try:
             yield {"db_conn": connection}
         finally:

@@ -29,6 +29,7 @@ def _connect_or_skip():
         pytest.skip("PEC_TEST_DB_DSN não definida para os testes de integração clínica.")
     try:
         conn = get_connection(dsn=dsn)
+        conn.set_session(readonly=True, autocommit=True)
     except Exception as exc:  # pragma: no cover - depende do ambiente local
         pytest.skip(f"Banco indisponível para testes: {exc}")
     return conn

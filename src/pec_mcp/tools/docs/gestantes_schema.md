@@ -23,7 +23,7 @@ Exames complementares do pré-natal.
 
 | Coluna | Tipo | Descrição |
 |---|---|---|
-| `co_exame_requisitado` | bigint FK | → tb_pre_natal.co_seq_pre_natal |
+| `co_exame_requisitado` | bigint FK | → tb_exame_requisitado.co_seq_exame_requisitado (o exame liga à gestação pelo `co_prontuario` do exame, realizado após a DUM) |
 | `dt_provavel_parto_eco` | timestamp | DPP por ecografia (mais precisa que DUM) |
 
 ## Cadeia de joins (paciente)

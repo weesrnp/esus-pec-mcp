@@ -18,7 +18,7 @@ def get_db_conn(ctx: Context):
     """
 
     conn: Optional[object] = None
-    # O SaaS usa um contexto mínimo com ``state`` para injetar a conexão.
+    # Quem embute as tools em outro servidor injeta a conexão em ``ctx.state``.
     state = getattr(ctx, "state", None)
     if isinstance(state, dict):
         conn = state.get("db_conn")

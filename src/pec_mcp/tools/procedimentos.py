@@ -21,19 +21,20 @@ WITH proced_individual AS (
     SELECT
         cp.co_cidadao AS paciente_id,
         dp.co_proced AS codigo_sigtap,
-        dp.no_procedimento AS nome_procedimento,
+        dp.ds_proced AS nome_procedimento,
         t.dt_registro::date AS data_realizacao,
-        pr.qt_procedimentos AS quantidade,
+        1 AS quantidade,
         dprof.no_profissional AS profissional_nome,
         dcbo.no_cbo AS cbo_descricao,
-        'consulta_individual' AS contexto
+        'consulta_individual'::text AS contexto
     FROM tb_fat_atd_ind_procedimentos pr
     JOIN tb_fat_cidadao_pec cp ON cp.co_seq_fat_cidadao_pec = pr.co_fat_cidadao_pec
-    LEFT JOIN tb_dim_procedimento dp ON dp.co_seq_dim_procedimento = pr.co_dim_procedimento
+    -- O subfato guarda o procedimento realizado em co_dim_procedimento_avaliado
+    -- (co_dim_procedimento_solicitado é pedido, não execução).
+    JOIN tb_dim_procedimento dp ON dp.co_seq_dim_procedimento = pr.co_dim_procedimento_avaliado
     LEFT JOIN tb_dim_tempo t ON t.co_seq_dim_tempo = pr.co_dim_tempo
-    LEFT JOIN tb_fat_atendimento_individual fai ON fai.co_seq_fat_atd_ind = pr.co_fat_atd_ind
-    LEFT JOIN tb_dim_profissional dprof ON dprof.co_seq_dim_profissional = fai.co_dim_profissional
-    LEFT JOIN tb_dim_cbo dcbo ON dcbo.co_seq_dim_cbo = fai.co_dim_cbo
+    LEFT JOIN tb_dim_profissional dprof ON dprof.co_seq_dim_profissional = pr.co_dim_profissional_1
+    LEFT JOIN tb_dim_cbo dcbo ON dcbo.co_seq_dim_cbo = pr.co_dim_cbo_1
     WHERE cp.co_cidadao = %s
       {individual_filters}
 ),
@@ -41,12 +42,12 @@ proced_ambulatorial AS (
     SELECT
         cp.co_cidadao AS paciente_id,
         dp.co_proced AS codigo_sigtap,
-        dp.no_procedimento AS nome_procedimento,
+        dp.ds_proced AS nome_procedimento,
         t.dt_registro::date AS data_realizacao,
-        f.qt_procedimentos AS quantidade,
+        1 AS quantidade,
         dprof.no_profissional AS profissional_nome,
         dcbo.no_cbo AS cbo_descricao,
-        'sala_procedimentos' AS contexto
+        'sala_procedimentos'::text AS contexto
     FROM tb_fat_proced_atend_proced f
     JOIN tb_fat_cidadao_pec cp ON cp.co_seq_fat_cidadao_pec = f.co_fat_cidadao_pec
     LEFT JOIN tb_dim_procedimento dp ON dp.co_seq_dim_procedimento = f.co_dim_procedimento
@@ -90,7 +91,7 @@ def _build_procedimentos_filters(
 
     if termo_busca and termo_busca.strip():
         term = f"%{termo_busca.strip().upper()}%"
-        filters.append("AND dp.no_procedimento ILIKE %s")
+        filters.append("AND dp.ds_proced ILIKE %s")
         filter_params.append(term)
 
     extra_sql = "\n      ".join(filters)

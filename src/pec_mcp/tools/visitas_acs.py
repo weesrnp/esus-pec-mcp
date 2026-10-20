@@ -142,7 +142,7 @@ def listar_visitas_acs(
     Permite filtrar por profissional, período, tipo de acompanhamento,
     motivo da visita, unidade de saúde e presença de aferições.
 
-    Exemplos de uso pela LM:
+    Exemplos de uso:
     - "Quantas visitas a gestantes o ACS Maria fez nos últimos 2 meses?"
       → nome_profissional="Maria", acompanhamento="gestante", ultimos_dias=60, apenas_contagem=true
     - "Dos hipertensos, quantos tiveram PA aferida esse mês?"
@@ -155,6 +155,9 @@ def listar_visitas_acs(
 
     Filtros de motivo: cadastro, periodica, busca_ativa, acompanhamento,
     egresso_internacao, controle_ambiental, convite_atividade, orientacao_prevencao.
+
+    Identificadores: `paciente_id` é o co_seq_cidadao (o mesmo das demais tools);
+    `profissional_id` é a chave da dimensão do DW (co_seq_dim_profissional).
     """
 
     clauses = ["cbo.nu_cbo = %s"]
@@ -200,7 +203,14 @@ def listar_visitas_acs(
         clauses.append(f"v.{_MOTIVO_MAP[motivo_key]} = 1")
 
     if unidade_saude_id is not None:
-        clauses.append("v.co_dim_unidade_saude = %s")
+        # unidade_saude_id é o co_seq_unidade_saude de listar_unidades_saude;
+        # o fato usa a chave da dimensão, então o vínculo é feito pelo CNES.
+        clauses.append(
+            "EXISTS (SELECT 1 FROM tb_dim_unidade_saude du "
+            "JOIN tb_unidade_saude us ON us.nu_cnes = du.nu_cnes "
+            "WHERE du.co_seq_dim_unidade_saude = v.co_dim_unidade_saude "
+            "AND us.co_seq_unidade_saude = %s)"
+        )
         params.append(int(unidade_saude_id))
 
     # Filtros de presença de aferição
@@ -237,7 +247,7 @@ def listar_visitas_acs(
             v.co_seq_fat_visita_domiciliar AS visita_id,
             p.no_profissional              AS profissional,
             t.dt_registro                  AS data_visita,
-            v.co_fat_cidadao_pec           AS paciente_pec_id,
+            cp.co_cidadao                  AS paciente_pec_id,
             cp.no_cidadao                  AS paciente_nome,
             turno.ds_turno                 AS turno,
             desf.ds_desfecho_visita        AS desfecho,

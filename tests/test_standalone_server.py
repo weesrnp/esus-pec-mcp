@@ -6,12 +6,13 @@ from types import SimpleNamespace
 import pytest
 
 from pec_mcp.config import ServerSettings
+from pec_mcp import db as db_module
 from pec_mcp import server as server_module
 from pec_mcp.server import STANDALONE_TOOLS, create_server
 from pec_mcp.tools import get_db_conn
 
 
-def test_saas_context_connection_is_still_supported():
+def test_state_context_connection_is_still_supported():
     connection = object()
     ctx = SimpleNamespace(state={"db_conn": connection})
     assert get_db_conn(ctx) is connection
@@ -30,29 +31,47 @@ def test_missing_context_connection_has_clear_error():
         get_db_conn(SimpleNamespace())
 
 
-def test_standalone_lifespan_enforces_readonly_and_closes(monkeypatch):
+def test_standalone_lifespan_enforces_readonly_timeout_and_closes(monkeypatch):
     calls = []
 
+    class FakeCursor:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def execute(self, sql, params=None):
+            calls.append(("execute", sql, params))
+
     class FakeConnection:
+        closed = 0
+
         def set_session(self, **kwargs):
             calls.append(("set_session", kwargs))
 
+        def cursor(self):
+            return FakeCursor()
+
         def close(self):
             calls.append(("close", None))
+            self.closed = 1
 
     connection = FakeConnection()
-    monkeypatch.setattr(server_module, "get_connection", lambda dsn: connection)
+    monkeypatch.setattr(db_module, "get_connection", lambda dsn: connection)
+    monkeypatch.setenv("PEC_DB_STATEMENT_TIMEOUT_MS", "15000")
 
     async def exercise_lifespan():
         lifespan = server_module._build_lifespan("test-dsn")
         async with lifespan(None) as state:
-            assert state == {"db_conn": connection}
+            assert isinstance(state["db_conn"], db_module.ConexaoSomenteLeitura)
 
     asyncio.run(exercise_lifespan())
-    assert calls == [
-        ("set_session", {"readonly": True, "autocommit": True}),
-        ("close", None),
-    ]
+    assert calls[0] == ("set_session", {"readonly": True, "autocommit": True})
+    executados = [c[1] for c in calls if c[0] == "execute"]
+    assert "SET default_transaction_read_only = on" in executados
+    assert ("execute", "SET statement_timeout = %s", (15000,)) in calls
+    assert calls[-1] == ("close", None)
 
 
 def test_standalone_registers_the_clinical_tools_without_opening_database():

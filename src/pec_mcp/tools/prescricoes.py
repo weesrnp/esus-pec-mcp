@@ -17,6 +17,7 @@ from typing import Any, List, Literal, Optional
 from mcp.server.fastmcp import Context
 
 from ..db import query_all
+from ..domain.patient import mascarar_texto_livre
 from ..models import MedicationPrescriptionResult
 from . import get_db_conn, to_iso_datetime
 
@@ -88,7 +89,7 @@ def _clean_recommendation(value: object) -> Optional[str]:
     raw = re.sub(r"<[^>]+>", "", raw)
     lines = [re.sub(r"[ \t]+", " ", line).strip() for line in raw.splitlines()]
     clean = "\n".join(line for line in lines if line).strip()
-    return clean[:2000] or None
+    return mascarar_texto_livre(clean[:2000]) or None
 
 
 def _state(row: dict[str, Any]) -> Literal["ativo", "concluído", "interrompido"]:
@@ -151,7 +152,7 @@ def _row_to_prescription_result(
         frequencia_descricao=_to_str_or_none(row.get("frequencia_descricao")),
         frequencia_periodo=_to_str_or_none(row.get("frequencia_periodo")),
         frequencia_unidade_tempo=_to_int_or_none(row.get("frequencia_unidade_tempo")),
-        posologia=_to_str_or_none(row.get("posologia")),
+        posologia=mascarar_texto_livre(row.get("posologia")),
         via_administracao_id=_to_int_or_none(row.get("via_administracao_id")),
         quantidade_receitada=_to_str_or_none(row.get("quantidade_receitada")),
         inicio_tratamento=to_iso_datetime(row.get("inicio_tratamento")),
@@ -163,7 +164,7 @@ def _row_to_prescription_result(
         recomendacao=recommendation,
         interrompido=bool(row.get("interrompido")),
         data_interrupcao=to_iso_datetime(row.get("data_interrupcao")),
-        motivo_interrupcao=_to_str_or_none(row.get("motivo_interrupcao")),
+        motivo_interrupcao=mascarar_texto_livre(row.get("motivo_interrupcao")),
         grupo_renovacao_id=_to_int_or_none(row.get("grupo_renovacao_id")),
         cid_code=_to_str_or_none(row.get("cid_code")),
         ciap_code=_to_str_or_none(row.get("ciap_code")),

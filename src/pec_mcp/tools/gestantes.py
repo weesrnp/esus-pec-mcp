@@ -14,7 +14,6 @@ from ..models import GestanteResult
 from . import get_db_conn, to_iso_datetime
 from .filters import build_patient_filters
 
-# Consulta baseada no enunciado. Se o schema real divergir, ajustar aqui.
 _SQL_GESTANTES = """
 WITH g AS (
     SELECT
@@ -26,13 +25,25 @@ WITH g AS (
         pn.dt_desfecho,
         pn.tp_gravidez,
         pn.st_alto_risco,
-        ex.dt_provavel_parto_eco,
+        usg.dt_provavel_parto_eco,
         (CURRENT_DATE - pn.dt_ultima_menstruacao::date) AS gest_days
     FROM tb_pre_natal pn
     JOIN tb_prontuario pr ON pr.co_seq_prontuario = pn.co_prontuario
     JOIN tb_cidadao c ON c.co_seq_cidadao = pr.co_cidadao
-    LEFT JOIN tb_exame_prenatal ex ON ex.co_exame_requisitado = pn.co_seq_pre_natal
+    -- DPP da USG mais recente desta gestação (exame do mesmo prontuário,
+    -- realizado depois da DUM). Uma linha no máximo, para não multiplicar gestações.
+    LEFT JOIN LATERAL (
+        SELECT ex.dt_provavel_parto_eco
+        FROM tb_exame_prenatal ex
+        JOIN tb_exame_requisitado er ON er.co_seq_exame_requisitado = ex.co_exame_requisitado
+        WHERE er.co_prontuario = pn.co_prontuario
+          AND ex.dt_provavel_parto_eco IS NOT NULL
+          AND COALESCE(er.dt_realizacao, er.dt_resultado) >= pn.dt_ultima_menstruacao
+        ORDER BY COALESCE(er.dt_realizacao, er.dt_resultado) DESC, er.co_seq_exame_requisitado DESC
+        LIMIT 1
+    ) usg ON TRUE
     WHERE pn.dt_desfecho IS NULL
+      AND COALESCE(c.st_faleceu, 0) = 0
 )
 SELECT
     g.gestacao_id,
@@ -98,7 +109,7 @@ def listar_gestantes(
     """
 
     # Teto seguro de paginação para evitar sobrecarga de consultas.
-    safe_limit = max(1, min(limite, 200))
+    safe_limit = max(1, min(int(limite), 200))
     trimestre_range = _resolve_trimestre(trimestre)
     trimestre_clause = ""
     params: List = [7, 294]

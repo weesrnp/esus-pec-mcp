@@ -104,7 +104,7 @@ SELECT
         WHEN fac.st_pse_educacao = 1 OR fac.st_pse_saude = 1 OR fac.co_dim_inep IS NOT NULL THEN 1
         ELSE 0
     END AS is_pse,
-    COALESCE(fci.st_tema_reuniao_disc_proj_tera, 0) AS is_pts
+    CASE WHEN EXISTS (SELECT 1 FROM tb_fat_atvdd_coletiva_int fci WHERE fci.co_fat_atividade_coletiva = fac.co_seq_fat_atividade_coletiva AND fci.st_tema_reuniao_disc_proj_tera = 1) THEN 1 ELSE 0 END AS is_pts
 FROM tb_fat_atividade_coletiva fac
 LEFT JOIN tb_dim_tempo t ON t.co_seq_dim_tempo = fac.co_dim_tempo
 LEFT JOIN tb_dim_unidade_saude du ON du.co_seq_dim_unidade_saude = fac.co_dim_unidade_saude
@@ -112,7 +112,6 @@ LEFT JOIN tb_dim_equipe de ON de.co_seq_dim_equipe = fac.co_dim_equipe
 LEFT JOIN tb_dim_profissional dprof ON dprof.co_seq_dim_profissional = fac.co_dim_profissional
 LEFT JOIN tb_dim_cbo dcbo ON dcbo.co_seq_dim_cbo = fac.co_dim_cbo
 LEFT JOIN tb_dim_tipo_atividade dta ON dta.co_seq_dim_tipo_atividade = fac.co_dim_tipo_atividade
-LEFT JOIN tb_fat_atvdd_coletiva_int fci ON fci.co_fat_atividade_coletiva = fac.co_seq_fat_atividade_coletiva
 WHERE 1=1
   {where_clauses}
 ORDER BY fac.co_seq_fat_atividade_coletiva DESC
@@ -156,7 +155,7 @@ def listar_atividades_coletivas(
         where_clauses.append(f"AND dcbo.nu_cbo IN ({cbos_sql})")
 
     if apenas_pts:
-        where_clauses.append("AND fci.st_tema_reuniao_disc_proj_tera = 1")
+        where_clauses.append("AND EXISTS (SELECT 1 FROM tb_fat_atvdd_coletiva_int fci WHERE fci.co_fat_atividade_coletiva = fac.co_seq_fat_atividade_coletiva AND fci.st_tema_reuniao_disc_proj_tera = 1)")
 
     if tipo_atividade is not None and int(tipo_atividade) > 0:
         where_clauses.append("AND fac.co_dim_tipo_atividade = %s")

@@ -27,7 +27,7 @@ JOIN tb_prontuario pr ON pr.co_seq_prontuario = er.co_prontuario
 JOIN grupos_paciente gp
   ON gp.grupo_id = COALESCE(pr.co_prontuario_grupo, pr.co_seq_prontuario)
 WHERE (%s IS NULL OR COALESCE(er.dt_resultado, er.dt_realizacao) >= %s::timestamp)
-  AND (%s IS NULL OR COALESCE(er.dt_resultado, er.dt_realizacao) <= %s::timestamp)
+  AND (%s IS NULL OR COALESCE(er.dt_resultado, er.dt_realizacao) < (%s::date + 1))
 ORDER BY COALESCE(er.dt_resultado, er.dt_realizacao) DESC NULLS LAST,
          er.co_seq_exame_requisitado DESC
 LIMIT %s

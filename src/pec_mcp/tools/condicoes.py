@@ -12,7 +12,7 @@ from typing import List, Optional
 from mcp.server.fastmcp import Context
 
 from ..db import query_all
-from ..domain.patient import compute_age_display, to_initials
+from ..domain.patient import compute_age_display, mascarar_texto_livre, to_initials
 from ..models import ConditionResult
 from . import get_db_conn, to_iso_date
 from .filters import build_condition_filters, build_patient_filters
@@ -73,7 +73,7 @@ def _format_condition_row(row: dict) -> ConditionResult:
         dt_inicio_condicao=to_iso_date(row.get("dt_inicio_condicao")),
         dt_fim_condicao=to_iso_date(row.get("dt_fim_condicao")),
         situacao_id=str(row.get("situacao_id")) if row.get("situacao_id") is not None else None,
-        observacao=str(row.get("observacao")) if row.get("observacao") is not None else None,
+        observacao=mascarar_texto_livre(row.get("observacao")),
     )
 
 

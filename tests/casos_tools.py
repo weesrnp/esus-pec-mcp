@@ -290,7 +290,9 @@ _LINHA_UNIDADE = _linha(
     cnes="1234567",
     nome="UBS Centro",
     localidade_id=3,
-    ativo=True,
+    ativo=1,
+    tipo_cnes=2,
+    tipo_descricao="CENTRO DE SAÚDE/UNIDADE BÁSICA",
 )
 
 _LINHA_CODIGO = _linha(code="J45", description="Asma")
@@ -446,8 +448,8 @@ _LINHA_PROFISSIONAL_ATIVIDADE = _linha(
 
 _LINHA_ACAO_PSE = _linha(
     atividade_id=301,
-    inep_escola="41096501",
-    nome_escola="Escola Municipal Honorio Serpa",
+    inep_escola="12345678",
+    nome_escola="Escola Municipal Exemplo",
     data_atividade=DATA_VISITA,
     equipe_ine="0001234-567",
     equipe_nome="Equipe Saude da Familia 1",
@@ -544,7 +546,7 @@ CASOS: Dict[str, CasoTool] = {
         argumentos={},
         linhas=[_LINHA_UNIDADE],
         chaves_permitidas=frozenset(
-            {"unidade_id", "cnes", "name", "localidade_id", "is_active"}
+            {"unidade_id", "cnes", "name", "localidade_id", "is_active", "tipo_cnes", "tipo_unidade"}
         ),
         teto_limite=None,
     ),
@@ -571,7 +573,7 @@ CASOS: Dict[str, CasoTool] = {
                 "condicoes",
             }
         ),
-        teto_limite=1000,
+        teto_limite=200,
         argumentos_limite={"limite": 10_000},
     ),
     "listar_registros_antropometria": CasoTool(

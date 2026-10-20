@@ -184,7 +184,7 @@ def test_campo_sensivel_nunca_vai_cru_para_o_resultado():
 
 def test_modulo_em_quarentena_nao_esta_registrado():
     """
-    Nenhuma tool de módulo em quarentena pode ser exposta à LM.
+    Nenhuma tool de módulo em quarentena pode ser exposta ao cliente MCP.
 
     Garante que nenhum módulo presente em VIOLACOES_CONHECIDAS seja registrado
     em STANDALONE_TOOLS. Com a quarentena zerada (VIOLACOES_CONHECIDAS = set()),

@@ -24,10 +24,10 @@ from . import get_db_conn, to_iso_date
 
 _TETO_SAUDE_BUCAL = 200
 
-# Conjuntos de códigos SIGTAP e equivalências CDS
-_EXODONTIAS_SIGTAP = frozenset(
-    {"0414020138", "0414020146", "0414020120", "ABPO011", "ABPO012"}
-)
+# Conjuntos de códigos SIGTAP e equivalências CDS (ABPO*).
+# B3 conta exodontia de dente PERMANENTE: 04.14.02.013-8, 04.14.02.014-6 e ABPO012.
+# Exodontia de decíduo (04.14.02.012-0 / ABPO011) fica fora do indicador.
+_EXODONTIAS_SIGTAP = frozenset({"0414020138", "0414020146", "ABPO012"})
 _PREVENTIVOS_SIGTAP = frozenset(
     {
         "0101020058",
@@ -37,10 +37,12 @@ _PREVENTIVOS_SIGTAP = frozenset(
         "0101020104",
         "0101020120",
         "0307030040",
-        "ABPO003",
-        "ABPO004",
-        "ABPO005",
-        "ABPO010",
+        "ABPO003",  # cariostático
+        "ABPO004",  # selante
+        "ABPO005",  # flúor tópico
+        "ABPO010",  # evidenciação de placa
+        "ABPO015",  # orientação de higiene bucal
+        "ABPO016",  # profilaxia
     }
 )
 _TRA_ART_SIGTAP = frozenset({"0307010074"})
@@ -70,14 +72,14 @@ def _is_exodontia(code: Optional[str]) -> bool:
     if not code:
         return False
     clean = re.sub(r"[.\-]", "", str(code).strip())
-    return clean in _EXODONTIAS_SIGTAP or clean.startswith("ABPO01")
+    return clean in _EXODONTIAS_SIGTAP
 
 
 def _is_preventivo(code: Optional[str]) -> bool:
     if not code:
         return False
     clean = re.sub(r"[.\-]", "", str(code).strip())
-    return clean in _PREVENTIVOS_SIGTAP or clean.startswith("ABPO00")
+    return clean in _PREVENTIVOS_SIGTAP
 
 
 def _is_tra_art(code: Optional[str]) -> bool:
@@ -116,7 +118,7 @@ LEFT JOIN tb_dim_profissional dprof ON dprof.co_seq_dim_profissional = fao.co_di
 LEFT JOIN tb_dim_cbo dcbo ON dcbo.co_seq_dim_cbo = fao.co_dim_cbo_1
 LEFT JOIN tb_dim_unidade_saude du ON du.co_seq_dim_unidade_saude = fao.co_dim_unidade_saude_1
 LEFT JOIN tb_dim_equipe de ON de.co_seq_dim_equipe = fao.co_dim_equipe_1
-LEFT JOIN tb_dim_tipo_consulta_odonto dtc ON dtc.co_seq_dim_tipo_cnslt_odnt = fao.co_dim_tipo_consulta
+LEFT JOIN tb_dim_tipo_consulta_odonto dtc ON dtc.co_seq_dim_tipo_cnsulta_odonto = fao.co_dim_tipo_consulta
 LEFT JOIN tb_dim_tipo_atendimento dta ON dta.co_seq_dim_tipo_atendimento = fao.co_dim_tipo_atendimento
 WHERE 1=1
   {where_clauses}
@@ -158,7 +160,9 @@ def listar_atendimentos_odonto(
         params.append(f"{clean_cbo}%")
 
     if apenas_primeira_consulta:
-        where_clauses.append("AND fao.co_dim_tipo_consulta = 1")
+        # co_dim_tipo_consulta é chave substituta; o código LEDI fica em nu_identificador
+        # (1 = primeira consulta odontológica programática).
+        where_clauses.append("AND dtc.nu_identificador::text = '1'")
 
     if apenas_tratamento_concluido:
         where_clauses.append("AND fao.st_conduta_tratamento_concluid = 1")
@@ -202,7 +206,7 @@ SELECT
     cp.co_cidadao AS paciente_id,
     fop.co_fat_atd_odnt AS atendimento_id,
     dp.co_proced AS codigo_sigtap,
-    dp.no_procedimento AS nome_procedimento,
+    dp.ds_proced AS nome_procedimento,
     COALESCE(fop.qt_procedimentos, 1) AS quantidade,
     t.dt_registro::text AS data_realizacao,
     dprof.no_profissional AS profissional_nome,
@@ -231,7 +235,7 @@ def listar_procedimentos_odonto(
     """
     Lista procedimentos clínicos realizados na cadeira odontológica.
 
-    Permite auditar exodontias de permanentes (Indicador B3), procedimentos
+    Permite auditar exodontias de dentes permanentes (Indicador B3), procedimentos
     preventivos individuais (Indicador B4) e restaurações atraumáticas TRA/ART (Indicador B6).
     """
     if paciente_id is None or int(paciente_id) <= 0:
@@ -251,16 +255,20 @@ def listar_procedimentos_odonto(
 
     if grupo and grupo.strip().lower() != "todos":
         g = grupo.strip().lower()
+        # Mesmos conjuntos usados nas flags is_*, para SQL e Python não divergirem.
+        codigos = None
         if g in ("exodontia", "exodontias"):
-            where_clauses.append(
-                "AND (dp.co_proced IN ('0414020138', '0414020146', '0414020120') OR dp.co_proced LIKE 'ABPO01%')"
-            )
+            codigos = _EXODONTIAS_SIGTAP
         elif g in ("preventivo", "preventivos"):
-            where_clauses.append(
-                "AND (dp.co_proced IN ('0101020058', '0101020066', '0101020074', '0101020082', '0101020104', '0101020120', '0307030040') OR dp.co_proced LIKE 'ABPO00%')"
-            )
+            codigos = _PREVENTIVOS_SIGTAP
         elif g in ("tra_art", "art", "tra"):
-            where_clauses.append("AND dp.co_proced = '0307010074'")
+            codigos = _TRA_ART_SIGTAP
+        else:
+            raise ValueError("grupo inválido. Use: exodontia, preventivo, tra_art ou todos.")
+        where_clauses.append(
+            "AND REGEXP_REPLACE(dp.co_proced, '[^0-9A-Za-z]', '', 'g') = ANY(%s)"
+        )
+        params.append(sorted(codigos))
 
     where_sql = "\n  ".join(where_clauses)
     sql = _SQL_PROCEDIMENTOS_ODONTO.format(where_clauses=where_sql)
@@ -308,7 +316,7 @@ JOIN tb_fat_cidadao_pec cp ON cp.co_seq_fat_cidadao_pec = fopr.co_fat_cidadao_pe
 LEFT JOIN tb_cidadao c ON c.co_seq_cidadao = cp.co_cidadao
 LEFT JOIN tb_dim_cid dcid ON dcid.co_seq_dim_cid = fopr.co_dim_cid
 LEFT JOIN tb_dim_ciap dciap ON dciap.co_seq_dim_ciap = fopr.co_dim_ciap
-LEFT JOIN tb_dim_situacao_problema dsp ON dsp.co_seq_dim_situacao_problema = fopr.co_dim_situacao_problema
+LEFT JOIN tb_dim_situacao_problema dsp ON dsp.co_seq_dim_situacao = fopr.co_dim_situacao_problema
 LEFT JOIN tb_dim_tempo t ON t.co_seq_dim_tempo = fopr.co_dim_tempo
 LEFT JOIN tb_dim_profissional dprof ON dprof.co_seq_dim_profissional = fopr.co_dim_profissional_1
 LEFT JOIN tb_dim_cbo dcbo ON dcbo.co_seq_dim_cbo = fopr.co_dim_cbo_1
@@ -340,7 +348,7 @@ def listar_problemas_odonto(
     params: list = [pid]
 
     if cid_codigo and cid_codigo.strip():
-        clean_cid = cid_codigo.strip().upper()
+        clean_cid = cid_codigo.strip().upper().replace(".", "")
         where_clauses.append("AND UPPER(dcid.nu_cid) LIKE %s")
         params.append(f"{clean_cid}%")
 

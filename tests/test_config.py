@@ -45,9 +45,9 @@ def test_invalid_dsn_error_does_not_echo_credentials():
     assert secret not in str(exc_info.value)
 
 
-def test_server_config_defaults_to_local_streamable_http():
+def test_server_config_defaults_to_local_stdio():
     settings = get_server_settings({})
-    assert settings.transport == "streamable-http"
+    assert settings.transport == "stdio"
     assert settings.host == "127.0.0.1"
     assert settings.port == 5174
 

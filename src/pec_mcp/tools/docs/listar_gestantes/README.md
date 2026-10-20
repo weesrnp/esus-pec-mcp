@@ -11,7 +11,7 @@
     - `tp_gravidez`, `st_alto_risco`
   - `tb_prontuario`: `co_seq_prontuario`, `co_cidadao`
   - `tb_cidadao`: `co_seq_cidadao`, `no_cidadao`
-  - `tb_exame_prenatal`: `co_exame_requisitado`, `dt_provavel_parto_eco`
+  - `tb_exame_prenatal` + `tb_exame_requisitado`: DPP da USG mais recente do mesmo prontuário, realizada após a DUM (`co_exame_requisitado`, `co_prontuario`, `dt_provavel_parto_eco`)
 - **Filtros suportados**:
   - `trimestre` (opcional): `primeiro`, `segundo`, `terceiro`
   - `unidade_saude_id` (opcional)
