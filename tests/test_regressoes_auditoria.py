@@ -6,9 +6,12 @@ Cada teste fixa um bug que existia: se ele voltar, o teste quebra.
 
 from __future__ import annotations
 
+import importlib
+import re
+
 import pytest
 
-from casos_tools import ContextoFalso
+from casos_tools import CASOS, ContextoFalso
 from pec_mcp import db as db_module
 from pec_mcp.domain.patient import mascarar_texto_livre
 from pec_mcp.tools import (
@@ -206,6 +209,38 @@ def test_prefixo_de_nome_escapa_curingas(monkeypatch):
 def test_prefixo_de_nome_curto_demais_e_recusado():
     with pytest.raises(ValueError, match="2 caracteres"):
         paciente.capturar_paciente(ContextoFalso(), name_starts_with="%")
+
+
+# ── tabelas de log (Envers) ─────────────────────────────────────
+
+
+def test_nenhuma_sql_le_tabela_de_log_envers(monkeypatch):
+    # As tabelas tl_* do PEC são o log de auditoria (Hibernate Envers) das tb_*:
+    # uma linha por revisão, inclusive de registros alterados ou excluídos.
+    # Ler tl_medicao no lugar de tb_medicao duplicava medições.
+    consultas = []
+
+    def falso_all(conn, sql, params=None):
+        consultas.append(sql)
+        return []
+
+    def falso_one(conn, sql, params=None):
+        consultas.append(sql)
+        return {"total": 0, "count": 0}
+
+    for modulo in {c.modulo for c in CASOS.values()}:
+        mod = importlib.import_module(f"pec_mcp.tools.{modulo}")
+        if hasattr(mod, "query_all"):
+            monkeypatch.setattr(mod, "query_all", falso_all)
+        if hasattr(mod, "query_one"):
+            monkeypatch.setattr(mod, "query_one", falso_one)
+
+    for caso in CASOS.values():
+        caso.tool(ContextoFalso(), **caso.argumentos)
+
+    assert consultas
+    usam_log = [sql for sql in consultas if re.search(r"\btl_\w+", sql, re.IGNORECASE)]
+    assert not usam_log, usam_log[0]
 
 
 # ── conexão ─────────────────────────────────────────────────────

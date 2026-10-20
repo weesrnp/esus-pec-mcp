@@ -116,7 +116,7 @@
 - **Descrição**: histórico de peso, altura e IMC calculado de um paciente, consolidando dados de atendimentos clínicos (PEC) e visitas domiciliares (ACS) via UNION ALL.
 - **Consulta**: somente leitura.
 - **Fontes de dados**:
-  - **PEC**: `tl_medicao` → `tb_atend_prof` → `tb_atend` → `tb_prontuario` → `tb_cidadao` (profissional via `tb_lotacao` → `tb_prof` + `tb_cbo`)
+  - **PEC**: `tb_medicao` → `tb_atend_prof` → `tb_atend` → `tb_prontuario` → `tb_cidadao` (profissional via `tb_lotacao` → `tb_prof` + `tb_cbo`)
   - **Visita domiciliar**: `tb_fat_visita_domiciliar` → `tb_fat_cidadao_pec` (profissional via `tb_dim_profissional` + `tb_dim_cbo`)
 - **Filtros suportados**:
   - `paciente_id` (obrigatório, co_seq_cidadao)

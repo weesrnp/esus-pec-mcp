@@ -2,7 +2,7 @@
 Tools para registros de medições clínicas (antropometria, PA, HGT).
 
 Cada tool consolida dados de DUAS fontes distintas via UNION ALL:
-1. PEC (atendimento clínico) — tabela tl_medicao
+1. PEC (atendimento clínico) — tabela tb_medicao
 2. Visita domiciliar (CDS) — tabela tb_fat_visita_domiciliar
 
 O tipo de profissional é derivado do CBO:
@@ -49,10 +49,10 @@ def _classify_professional(cbo_code: Optional[str], cbo_name: Optional[str]) -> 
 # Joins reutilizáveis
 # ──────────────────────────────────────────────────────────────
 
-# PEC: tl_medicao → paciente + profissional
+# PEC: tb_medicao → paciente + profissional
 # ATENÇÃO: COALESCE(ap.st_cancelado, 0) = 0 é validado estritamente em test_tool_atendimentos_unit.py
 _FROM_PEC = """
-    FROM tl_medicao m
+    FROM tb_medicao m
     JOIN tb_atend_prof ap  ON ap.co_seq_atend_prof = m.co_atend_prof
                            AND COALESCE(ap.st_cancelado, 0) = 0
     JOIN tb_atend a        ON a.co_seq_atend       = ap.co_atend
@@ -63,7 +63,7 @@ _FROM_PEC = """
     LEFT JOIN tb_cbo cb    ON cb.co_cbo            = l.co_cbo
 """
 
-# tl_medicao guarda as medidas como varchar. Um "72,5" ou "?" num registro
+# tb_medicao guarda as medidas como varchar. Um "72,5" ou "?" num registro
 # derrubaria a consulta inteira com ::numeric; aqui o valor inválido vira NULL.
 def _numero_seguro(coluna: str) -> str:
     return (
@@ -98,7 +98,7 @@ def _validate_paciente_id(paciente_id: Any) -> int:
 def _build_date_filter_pec(
     data_inicio: Optional[str], data_fim: Optional[str], params: list[Any]
 ) -> str:
-    """Adiciona filtros de data para a fonte PEC (tl_medicao.dt_medicao)."""
+    """Adiciona filtros de data para a fonte PEC (tb_medicao.dt_medicao)."""
     clauses: list[str] = []
     if data_inicio:
         clauses.append("m.dt_medicao >= %s::timestamp")

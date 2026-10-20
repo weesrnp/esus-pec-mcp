@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1 — 2026-10-20
+
+### Corrigido
+
+- `listar_registros_antropometria`, `listar_registros_pa` e `listar_registros_hgt` liam `tl_medicao`, que no PEC é a tabela de log (Hibernate Envers) de `tb_medicao`: uma linha por revisão do registro. Uma medição editada aparecia repetida e uma excluída continuava aparecendo. As três tools agora leem `tb_medicao`.
+- Novo teste de regressão roda todas as tools e falha se alguma SQL citar uma tabela `tl_`.
+
 ## 1.1.0 — 2026-10-20
 
 Validado contra o schema oficial do PEC 5.5.28 no PostgreSQL 16 e numa instalação em produção no PostgreSQL 9.6.

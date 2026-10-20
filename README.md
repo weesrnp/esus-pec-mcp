@@ -351,7 +351,7 @@ O script roda só `EXPLAIN`: o PostgreSQL confere tabelas, colunas e tipos, mas 
 
 ## Limitações conhecidas
 
-As tools de condições, medições do PEC, gestantes e busca ativa leem as tabelas do prontuário (`tb_problema`, `tl_medicao`, `tb_pre_natal`). Em municípios que registram o atendimento clínico em outro sistema e enviam só fichas CDS ao PEC, essas tabelas ficam vazias e as tools devolvem zero. As tools baseadas no Data Warehouse (`tb_fat_*`: vacinas, visitas, saúde bucal, atividades coletivas, PSE, procedimentos) funcionam nos dois cenários.
+As tools de condições, medições do PEC, gestantes e busca ativa leem as tabelas do prontuário (`tb_problema`, `tb_medicao`, `tb_pre_natal`). Em municípios que registram o atendimento clínico em outro sistema e enviam só fichas CDS ao PEC, essas tabelas ficam vazias e as tools devolvem zero. As tools baseadas no Data Warehouse (`tb_fat_*`: vacinas, visitas, saúde bucal, atividades coletivas, PSE, procedimentos) funcionam nos dois cenários.
 
 ---
 

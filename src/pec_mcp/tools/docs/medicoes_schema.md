@@ -7,13 +7,13 @@ Referência das tabelas e joins usados pelas tools `listar_registros_antropometr
 
 As tools consolidam medições de **duas fontes distintas** via UNION ALL:
 
-### 1. PEC (Atendimento Clínico) — `tl_medicao`
+### 1. PEC (Atendimento Clínico) — `tb_medicao`
 
 Medições registradas durante atendimentos no Prontuário Eletrônico do Cidadão.
 
 **Cadeia de joins (paciente)**:
 ```
-tl_medicao.co_atend_prof
+tb_medicao.co_atend_prof
   → tb_atend_prof.co_seq_atend_prof
     → tb_atend.co_seq_atend (via co_atend)
       → tb_prontuario.co_seq_prontuario (via co_prontuario)
@@ -28,7 +28,7 @@ tb_atend_prof.co_lotacao
     → tb_cbo.co_cbo (via co_cbo) ← CBO para classificação
 ```
 
-**Colunas de medição em `tl_medicao`** (todas varchar(20)):
+**Colunas de medição em `tb_medicao`** (todas varchar(20)):
 
 | Coluna | Descrição | Exemplo |
 |---|---|---|
