@@ -18,7 +18,7 @@
 [![Database PostgreSQL](https://img.shields.io/badge/PostgreSQL-9.6%20a%2016-336791.svg)](https://www.postgresql.org/)
 [![License MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Security LGPD Compliant](https://img.shields.io/badge/LGPD-Blindagem%20Estrita-success.svg)](#seguran%C3%A7a-e-blindagem-lgpd)
-[![Tests Passing](https://img.shields.io/badge/tests-454%20passed-brightgreen.svg)](#testes-e-garantia-de-qualidade)
+[![Tests Passing](https://img.shields.io/badge/tests-457%20passed-brightgreen.svg)](#testes-e-garantia-de-qualidade)
 
 ---
 

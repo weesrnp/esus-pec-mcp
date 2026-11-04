@@ -8,6 +8,7 @@ from typing import List
 
 from mcp.server.fastmcp import Context
 
+from ..cache import cached_dimension
 from ..db import query_all
 from ..models import HealthUnitResult
 from . import get_db_conn
@@ -35,6 +36,7 @@ ORDER BY us.no_unidade_saude;
 """
 
 
+@cached_dimension(ttl_seconds=3600)
 def listar_unidades_saude(
     ctx: Context,
     apenas_atencao_primaria: bool = True,

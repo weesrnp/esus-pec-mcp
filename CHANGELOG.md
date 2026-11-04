@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0 - 2026-11-03
+
+### Otimizado
+
+- **Pilar 4 de Otimizacao:** Implementada camada de cache em memoria com TTL (pec_mcp.cache.cached_dimension) para consultas de dimensoes estaticas e imutaveis.
+- As tools listar_unidades_saude e obter_codigos_condicao_saude agora reutilizam resultados cacheados por 1 hora, eliminando round-trips repetitivos ao PostgreSQL em fluxos conversacionais densos.
+- Adicionado utilitario clear_dimension_cache() e suporte a isolamento por fixture em testes unitarios.
+
+### Testes
+
+- 2 novos testes unitarios adicionados para cobertura de armazenamento, reuso e expiracao do cache com TTL.
+- Suite de testes completa com 457 testes passando sem regressoes.
 ## 1.1.1 — 2026-10-20
 
 ### Corrigido

@@ -16,7 +16,15 @@ SERVER_SRC = PROJECT_ROOT / "src"
 if str(SERVER_SRC) not in sys.path:
     sys.path.insert(0, str(SERVER_SRC))
 
+from pec_mcp.cache import clear_dimension_cache
 from pec_mcp.db import get_connection, query_all
+
+
+@pytest.fixture(autouse=True)
+def _limpar_cache_dimensao_por_teste():
+    clear_dimension_cache()
+    yield
+    clear_dimension_cache()
 
 
 def _connect_or_skip():

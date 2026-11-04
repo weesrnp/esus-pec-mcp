@@ -10,6 +10,7 @@ from typing import List, Optional, Pattern, Tuple
 
 from mcp.server.fastmcp import Context
 
+from ..cache import cached_dimension
 from ..db import query_all
 from ..models import HealthConditionCaptureResult, HealthConditionCode
 from . import get_db_conn
@@ -239,6 +240,7 @@ def _build_where_and_params(
     return " OR ".join(clauses), params
 
 
+@cached_dimension(ttl_seconds=3600)
 def obter_codigos_condicao_saude(
     ctx: Context,
     condicao: str,
