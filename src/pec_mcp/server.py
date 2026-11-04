@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -79,7 +80,10 @@ def _build_lifespan(dsn: str | None):
             dsn or get_db_dsn(), statement_timeout_ms=get_statement_timeout_ms()
         )
         # Abre já na subida: credencial errada aparece logo, não na 1ª pergunta.
-        connection.abrir()
+        # PEC_DB_CONECTAR_NA_SUBIDA=0 adia para a 1ª consulta: o servidor pode ficar
+        # registrado em toda sessão sem ocupar uma das conexões do banco de produção.
+        if os.environ.get("PEC_DB_CONECTAR_NA_SUBIDA", "1") != "0":
+            connection.abrir()
         try:
             yield {"db_conn": connection}
         finally:

@@ -1,5 +1,15 @@
 # Changelog
 
+## Não lançado
+
+### Adicionado
+
+- `PEC_DB_CONECTAR_NA_SUBIDA=0` adia a conexão com o banco para a primeira consulta. Com o servidor registrado em toda sessão do cliente MCP, ele não ocupa conexão do PostgreSQL enquanto ninguém o usa. O padrão (`1`) mantém a abertura na subida.
+
+### Corrigido
+
+- O `.env` só era lido da pasta atual. Iniciado por um cliente MCP a partir de outra pasta, o servidor subia sem credenciais. Agora também lê o `.env` da raiz do repositório; variáveis do processo e o `.env` da pasta atual continuam com precedência.
+
 ## 1.2.0 - 2026-11-03
 
 ### Otimizado

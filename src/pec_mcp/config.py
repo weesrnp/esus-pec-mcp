@@ -18,6 +18,9 @@ except ImportError:  # pragma: no cover - dependência opcional
 if load_dotenv is not None:
     # Variáveis exportadas pelo processo têm precedência sobre o arquivo .env.
     load_dotenv(Path.cwd() / ".env", override=False)
+    # Fallback: .env da raiz do repositório, para quando o cliente MCP inicia o
+    # servidor a partir de outra pasta (ex.: Claude Code aberto em outro projeto).
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
 
 
 _DB_REQUIRED_VARS = (
